@@ -145,15 +145,18 @@ typedef struct osrmc_params* osrmc_params_t;
 /* Service-specific parameters */
 
 typedef struct osrmc_route_params* osrmc_route_params_t;
+typedef struct osrmc_route_annotations* osrmc_route_annotations_t;
 typedef struct osrmc_table_params* osrmc_table_params_t;
 typedef struct osrmc_table_annotations* osrmc_table_annotations_t;
 typedef struct osrmc_nearest_params* osrmc_nearest_params_t;
 typedef struct osrmc_match_params* osrmc_match_params_t;
+typedef struct osrmc_trip_params* osrmc_trip_params_t;
 
 /* Service-specific responses */
 
 typedef struct osrmc_route_response* osrmc_route_response_t;
 typedef struct osrmc_table_response* osrmc_table_response_t;
+typedef struct osrmc_trip_response* osrmc_trip_response_t;
 
 /* Service-specific callbacks */
 
@@ -182,11 +185,15 @@ OSRMC_API void osrmc_params_add_coordinate_with(osrmc_params_t params, float lon
                                                 int bearing, int range, osrmc_error_t* error);
 
 /* Route service */
+OSRMC_API osrmc_route_annotations_t osrmc_route_annotations_construct(osrmc_error_t* error);
+OSRMC_API void osrmc_route_annotations_destruct(osrmc_route_annotations_t annotations);
+OSRMC_API void osrmc_route_annotations_enable_distance(osrmc_route_annotations_t annotations, bool enable, osrmc_error_t* error);
 
 OSRMC_API osrmc_route_params_t osrmc_route_params_construct(osrmc_error_t* error);
 OSRMC_API void osrmc_route_params_destruct(osrmc_route_params_t params);
 OSRMC_API void osrmc_route_params_add_steps(osrmc_route_params_t params, int on);
 OSRMC_API void osrmc_route_params_add_alternatives(osrmc_route_params_t params, int on);
+OSRMC_API void osrmc_route_params_set_annotations(osrmc_route_params_t params, osrmc_route_annotations_t annotations, osrmc_error_t* error);
 
 OSRMC_API osrmc_route_response_t osrmc_route(osrmc_osrm_t osrm, osrmc_route_params_t params, osrmc_error_t* error);
 OSRMC_API void osrmc_route_with(osrmc_osrm_t osrm, osrmc_route_params_t params, osrmc_waypoint_handler_t handler,
@@ -228,6 +235,20 @@ OSRMC_API void osrmc_nearest_set_number_of_results(osrmc_nearest_params_t params
 OSRMC_API osrmc_match_params_t osrmc_match_params_construct(osrmc_error_t* error);
 OSRMC_API void osrmc_match_params_destruct(osrmc_match_params_t params);
 OSRMC_API void osrmc_match_params_add_timestamp(osrmc_match_params_t params, unsigned timestamp, osrmc_error_t* error);
+
+
+/* Trip service */
+
+OSRMC_API osrmc_trip_params_t osrmc_trip_params_construct(osrmc_error_t* error);
+OSRMC_API void osrmc_trip_params_destruct(osrmc_trip_params_t params);
+OSRMC_API void osrmc_trip_params_add_source(osrmc_trip_params_t params, bool first, osrmc_error_t* error);
+OSRMC_API void osrmc_trip_params_add_destination(osrmc_trip_params_t params, bool last, osrmc_error_t* error);
+OSRMC_API void osrmc_trip_params_add_roundtrip(osrmc_trip_params_t params, bool on, osrmc_error_t* error);
+OSRMC_API void osrmc_trip_params_set_annotations(osrmc_trip_params_t params, osrmc_route_annotations_t annotations, osrmc_error_t* error);
+OSRMC_API osrmc_trip_response_t osrmc_trip(osrmc_osrm_t osrm, osrmc_trip_params_t params, osrmc_error_t* error);
+OSRMC_API float osrmc_trip_response_distance(osrmc_trip_response_t response, osrmc_error_t* error);
+OSRMC_API float osrmc_trip_response_duration(osrmc_trip_response_t response, osrmc_error_t* error);
+OSRMC_API void osrmc_trip_response_destruct(osrmc_trip_response_t response);
 
 #ifdef __cplusplus
 }

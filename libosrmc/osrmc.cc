@@ -12,6 +12,7 @@
 #include <osrm/table_parameters.hpp>
 #include <osrm/nearest_parameters.hpp>
 #include <osrm/match_parameters.hpp>
+#include <osrm/trip_parameters.hpp>
 #include <osrm/status.hpp>
 #include <osrm/storage_config.hpp>
 
@@ -112,6 +113,32 @@ void osrmc_params_add_coordinate_with(osrmc_params_t params, float longitude, fl
   osrmc_error_from_exception(e, error);
 }
 
+/* Route service */
+osrmc_route_annotations_t osrmc_route_annotations_construct(osrmc_error_t* error) try {
+  auto* out = new osrm::RouteParameters::AnnotationsType{osrm::RouteParameters::AnnotationsType::Duration};
+  return reinterpret_cast<osrmc_route_annotations_t>(out);
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+  return nullptr;
+}
+
+void osrmc_route_annotations_destruct(osrmc_route_annotations_t annotations) {
+  delete reinterpret_cast<osrm::RouteParameters::AnnotationsType*>(annotations);
+}
+
+void osrmc_route_annotations_enable_distance(osrmc_route_annotations_t annotations, bool enable, osrmc_error_t* error) try {
+  using AnnotationsType = osrm::RouteParameters::AnnotationsType;
+  auto* annotations_typed = reinterpret_cast<AnnotationsType*>(annotations);
+
+  if (enable) {
+    *annotations_typed |= AnnotationsType::Distance;
+  } else {
+    *annotations_typed = static_cast<AnnotationsType>(static_cast<int>(*annotations_typed) ^ static_cast<int>(AnnotationsType::Distance));
+  }
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+}
+
 osrmc_route_params_t osrmc_route_params_construct(osrmc_error_t* error) try {
   auto* out = new osrm::RouteParameters;
 
@@ -133,6 +160,14 @@ void osrmc_route_params_add_steps(osrmc_route_params_t params, int on) {
 void osrmc_route_params_add_alternatives(osrmc_route_params_t params, int on) {
   auto* params_typed = reinterpret_cast<osrm::RouteParameters*>(params);
   params_typed->alternatives = on;
+}
+
+void osrmc_route_params_set_annotations(osrmc_route_params_t params, osrmc_route_annotations_t annotations, osrmc_error_t* error) try {
+  auto* params_typed = reinterpret_cast<osrm::RouteParameters*>(params);
+  auto* annotations_typed = reinterpret_cast<osrm::RouteParameters::AnnotationsType*>(annotations);
+  params_typed->annotations_type = *annotations_typed;
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
 }
 
 osrmc_route_response_t osrmc_route(osrmc_osrm_t osrm, osrmc_route_params_t params, osrmc_error_t* error) try {
@@ -375,4 +410,99 @@ void osrmc_match_params_add_timestamp(osrmc_match_params_t params, unsigned time
   params_typed->timestamps.emplace_back(timestamp);
 } catch (const std::exception& e) {
   osrmc_error_from_exception(e, error);
+}
+
+
+/* Trip service */
+osrmc_trip_params_t osrmc_trip_params_construct(osrmc_error_t* error) try {
+  osrm::TripParameters* out = new osrm::TripParameters;
+  return reinterpret_cast<osrmc_trip_params_t>(out);
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+  return nullptr;
+}
+
+void osrmc_trip_params_destruct(osrmc_trip_params_t params) {
+  delete reinterpret_cast<osrm::TripParameters*>(params);
+}
+
+void osrmc_trip_params_add_source(osrmc_trip_params_t params, bool first, osrmc_error_t* error) try {
+  auto* params_typed = reinterpret_cast<osrm::TripParameters*>(params);
+
+  if (first)
+    params_typed->source = osrm::TripParameters::SourceType::First;
+
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+}
+
+void osrmc_trip_params_add_destination(osrmc_trip_params_t params, bool last, osrmc_error_t* error) try {
+  auto* params_typed = reinterpret_cast<osrm::TripParameters*>(params);
+  if (last)
+    params_typed->destination = osrm::TripParameters::DestinationType::Last;
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+}
+
+void osrmc_trip_params_add_roundtrip(osrmc_trip_params_t params, bool on, osrmc_error_t* error) try {
+  auto* params_typed = reinterpret_cast<osrm::TripParameters*>(params);
+  params_typed->roundtrip = on;
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+}
+
+void osrmc_trip_params_set_annotations(osrmc_trip_params_t params, osrmc_route_annotations_t annotations, osrmc_error_t* error) try {
+  auto* params_typed = reinterpret_cast<osrm::RouteParameters*>(params);
+  auto* annotations_typed = reinterpret_cast<osrm::RouteParameters::AnnotationsType*>(annotations);
+  params_typed->annotations_type = *annotations_typed;
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+}
+
+osrmc_trip_response_t osrmc_trip(osrmc_osrm_t osrm, osrmc_trip_params_t params, osrmc_error_t* error) try {
+  auto* osrm_typed = reinterpret_cast<osrm::OSRM*>(osrm);
+  auto* params_typed = reinterpret_cast<osrm::TripParameters*>(params);
+
+  auto* out = new osrm::json::Object;
+  const auto status = osrm_typed->Trip(*params_typed, *out);
+
+  if (status == osrm::Status::Ok)
+    return reinterpret_cast<osrmc_trip_response_t>(out);
+
+  osrmc_error_from_json(*out, error);
+  return nullptr;
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+  return nullptr;
+}
+
+float osrmc_trip_response_distance(osrmc_trip_response_t response, osrmc_error_t* error) try {
+  auto* response_typed = reinterpret_cast<osrm::json::Object*>(response);
+
+  auto& routes = response_typed->values["trips"].get<osrm::json::Array>();
+  auto& route = routes.values.at(0).get<osrm::json::Object>();
+
+  const auto distance = route.values["distance"].get<osrm::json::Number>().value;
+  return distance;
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+  return INFINITY;
+}
+
+float osrmc_trip_response_duration(osrmc_trip_response_t response, osrmc_error_t* error) try {
+  auto* response_typed = reinterpret_cast<osrm::json::Object*>(response);
+
+  auto& routes = response_typed->values["trips"].get<osrm::json::Array>();
+  auto& route = routes.values.at(0).get<osrm::json::Object>();
+
+  const auto duration = route.values["duration"].get<osrm::json::Number>().value;
+  return duration;
+} catch (const std::exception& e) {
+  osrmc_error_from_exception(e, error);
+  return INFINITY;
+}
+
+
+void osrmc_trip_response_destruct(osrmc_trip_response_t response) {
+  delete reinterpret_cast<osrm::json::Object*>(response);
 }
